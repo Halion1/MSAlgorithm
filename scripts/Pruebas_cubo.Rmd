@@ -1,0 +1,2211 @@
+---
+title: "R Notebook"
+output: 
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+library(ggplot2)
+library(psych)
+library(dplyr)
+```
+
+Carga de Datos
+```{r}
+archivo <- "C:/Users/MELISSA/Documents/Ale_RLE/Pruebas/total2.csv"
+datos_alineamiento <- read.csv(archivo)
+```
+
+
+# Filtar por Archivo
+```{r}
+# DataPrueba_2211
+datos_alineamiento <- datos_alineamiento %>% filter(Test_Name == "DataPrueba_2111")
+```
+
+# Renombrar Variables 
+```{r}
+
+datos_alineamiento <- datos_alineamiento %>% rename(Tiempo = Alineamiento.Tiempo, Score = Alineamiento.Score, Long = Alineamiento.Long)
+
+```
+
+
+# Data de cada Algoritmo
+```{r}
+# Data Clustalw
+datos_alineamiento_clustalw <- datos_alineamiento %>% filter(Algoritmo == "ClustalW")
+
+# Data MUSCLE
+datos_alineamiento_muscle <- datos_alineamiento %>% filter(Algoritmo == "MUSCLE")
+
+# Data Simulated Annealing
+datos_alineamiento_simulated <- datos_alineamiento %>% filter(Algoritmo == "Simulated Annealing")
+
+# Data Leap Hybrid
+#datos_alineamiento_leap <- datos_alineamiento %>% filter(Algoritmo == "Leap Hybrid Sampler")
+```
+
+
+# Correlación de las variables : Kendall's Test
+
+```{r}
+
+# Correlación de Kendall para Score vs Tiempo de alineamiento de ClustalW
+cor_tiem_scor_clustalw=cor.test(datos_alineamiento_clustalw$Score, datos_alineamiento_clustalw$Tiempo,  method="kendall")
+cor_tiem_scor_clustalw
+
+# Correlación de Kendall para Score vs Tiempo de alineamiento de MUSCLE
+cor_tiem_scor_muscle=cor.test(datos_alineamiento_muscle$Score, datos_alineamiento_muscle$Tiempo,  method="kendall")
+cor_tiem_scor_muscle
+
+# Correlación de Kendall para Score vs Tiempo de alineamiento de Simulated Annealing
+cor_tiem_scor_simulated=cor.test(datos_alineamiento_simulated$Score, datos_alineamiento_simulated$Tiempo,  method="kendall")
+cor_tiem_scor_simulated
+
+# Correlación de Kendall para Score vs Tiempo de alineamiento de Lead Hybrid Sampler
+#cor_tiem_scor_leap=cor.test(datos_alineamiento_leap$Score, datos_alineamiento_leap$Tiempo,  method="kendall")
+#cor_tiem_scor_leap
+```
+
+La regla que cumple este test es que si el p-valor es menor a 0.05 se acepta la tau (cor)
+
+# Análisis de Regresión
+
+## 1. Análisis de Regresión de Tiempo vs Número de secuencias por ClustalW 
+
+```{r}
+# PRIMERO TIEMPO VS NÚMERO DE SECUENCIAS 
+# Regresión Lineal 
+# Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de ClustalW
+reg.lineal<-lm(Tiempo~Num,data=datos_alineamiento_clustalw)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Num),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Num)),data=datos_alineamiento_clustalw)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Num),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Num),data=datos_alineamiento_clustalw)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Num),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Num,5),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de Secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Num),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Num,2),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_clustalw$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Num),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO NÚMERO DE SECUENCIAS VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Num~Tiempo,data=datos_alineamiento_clustalw)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de ClustalW\n", #recordar que el score se maximiza 
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=10, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Num~I(exp(Tiempo)),data=datos_alineamiento_clustalw)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Num~log(Tiempo),data=datos_alineamiento_clustalw)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Num~poly(Tiempo,5),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Num~poly(Tiempo,2),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+## 2. Análisis de Regresión de Tiempo vs Número de secuencias por MUSCLE
+
+```{r}
+# PRIMERO TIEMPO VS NÚMERO DE SECUENCIAS 
+# Regresión Lineal 
+# Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de MUSCLE
+reg.lineal<-lm(Tiempo~Num,data=datos_alineamiento_muscle)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Número de secuencias y Tiempo de MUSCLE\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Num)),data=datos_alineamiento_muscle)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Num),data=datos_alineamiento_muscle)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Num,9),data=datos_alineamiento_muscle)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 9), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 9 entre Número de Secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_muscle$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 1) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Num,5),data=datos_alineamiento_muscle)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de Secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_muscle$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 3 
+reg.cuadratica5<-lm(Tiempo~poly(Num,3),data=datos_alineamiento_muscle)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 3 entre Número de Secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_muscle$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Num,2),data=datos_alineamiento_muscle)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Num),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO SCORE VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Num~Tiempo,data=datos_alineamiento_muscle)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de MUSCLE\n", #recordar que el score se maximiza 
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=10, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Num~I(exp(Tiempo)),data=datos_alineamiento_muscle)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Num~log(Tiempo),data=datos_alineamiento_muscle)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Num~poly(Tiempo,5),data=datos_alineamiento_muscle)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Num~poly(Tiempo,2),data=datos_alineamiento_muscle)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+## 3. Análisis de Regresión de Tiempo vs Número de secuencias por Simmulated Annealing
+
+```{r}
+# PRIMERO TIEMPO VS NÚMERO DE SECUENCIAS
+# Regresión Lineal 
+# Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de Simulated Annealing 
+reg.lineal<-lm(Tiempo~Num,data=datos_alineamiento_simulated)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_simulated$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Num),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Num)),data=datos_alineamiento_simulated)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Num),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Num),data=datos_alineamiento_simulated)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_simulated$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Num),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Num,5),data=datos_alineamiento_simulated)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de Secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_simulated$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Num),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Num,2),data=datos_alineamiento_simulated)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  scale_x_continuous(breaks = datos_alineamiento_simulated$Num) +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Num),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 5, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO NÚMERO DE SECUENCIAS VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Num~Tiempo,data=datos_alineamiento_simulated)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de ClustalW\n", #recordar que el score se maximiza 
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=10, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+#reg.exp<-lm(Num~I(exp(Tiempo)),data=datos_alineamiento_simulated)
+#summary(reg.exp)$adj.r.squared
+
+#ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Num)) +
+#  geom_point() +
+#  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+#  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+#       x = "\nTiempo (seg)\n",
+#       y = "\nNúmero de secuencias\n") +
+#  #theme_minimal() +
+#  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+#            x = max(datos_alineamiento_simulated$Tiempo),
+#            y = max(datos_alineamiento_simulated$Num),
+#            hjust = 2.7, #avanza en x
+#            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+#theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Num~log(Tiempo),data=datos_alineamiento_simulated)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Num~poly(Tiempo,5),data=datos_alineamiento_simulated)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Num~poly(Tiempo,2),data=datos_alineamiento_simulated)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+## 4. Análisis de Regresión de Tiempo vs Número de secuencias por Leap Hybrid Sampler
+
+```{r}
+# PRIMERO TIEMPO VS NÚMERO DE SECUENCIAS 
+# Regresión Lineal 
+# Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de Leap Hybrid Sampler
+reg.lineal<-lm(Tiempo~Num,data=datos_alineamiento_leap)
+summary(reg.lineal)$adj.r.squared 
+
+ggplot(datos_alineamiento_leap, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Num),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Num)),data=datos_alineamiento_leap)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Num),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Num),data=datos_alineamiento_leap)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Num),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Num,5),data=datos_alineamiento_leap)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de Secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Num),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Num,2),data=datos_alineamiento_leap)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Num, y = Tiempo)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nNúmero de secuencias\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Num),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO SCORE VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Num~Tiempo,data=datos_alineamiento_leap)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Tiempo computacional creciente cuando el Número de secuencias aumenta para el Algoritmo de Leap Hybrid Sampler\n", #recordar que el score se maximiza 
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=10, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Num~I(exp(Tiempo)),data=datos_alineamiento_leap)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Num~log(Tiempo),data=datos_alineamiento_leap)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Num~poly(Tiempo,5),data=datos_alineamiento_leap)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Num~poly(Tiempo,2),data=datos_alineamiento_leap)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Num)) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Número de secuencias y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nNúmero de secuencias\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Num),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+## 5. Análisis de Regresión de Tiempo vs Score por ClustalW
+
+
+```{r}
+# PRIMERO TIEMPO VS SCORE 
+# Regresión Lineal 
+# Score creciente cuando el Tiempo computacional aumenta para el Algoritmo de ClustalW
+reg.lineal<-lm(Tiempo~Score,data=datos_alineamiento_clustalw)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Score),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Score)),data=datos_alineamiento_clustalw)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Score),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Score),data=datos_alineamiento_clustalw)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Score),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Score,3),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Score),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Score,2),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Score),
+            y = max(datos_alineamiento_clustalw$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO SCORE VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Score~Tiempo,data=datos_alineamiento_clustalw)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Score creciente cuando el Tiempo computacional aumenta para el Algoritmo de ClustalW\n", #recordar que el score se maximiza 
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=11, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Score~I(exp(Tiempo)),data=datos_alineamiento_clustalw)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamiento_clustalw)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Score~poly(Tiempo,5),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Score~poly(Tiempo,2),data=datos_alineamiento_clustalw)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_clustalw, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_clustalw$Tiempo),
+            y = max(datos_alineamiento_clustalw$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+```
+```{r}
+summary(reg.lineal)
+```
+
+
+
+## 6. Análisis de Regresión de Tiempo vs Score MUSCLE
+
+```{r}
+# PRIMERO TIEMPO VS SCORE 
+# Score creciente cuando el Tiempo computacional aumenta para el Algoritmo de MUSCLE
+# Regresión Lineal 
+reg.lineal<-lm(Tiempo~Score,data=datos_alineamiento_muscle)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Score),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Score)),data=datos_alineamiento_muscle)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Score),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Score),data=datos_alineamiento_muscle)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Score),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Score,5),data=datos_alineamiento_muscle)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Score),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Score,2),data=datos_alineamiento_muscle)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Score),
+            y = max(datos_alineamiento_muscle$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO SCORE VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Score~Tiempo,data=datos_alineamiento_muscle)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Score~I(exp(Tiempo)),data=datos_alineamiento_muscle)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamiento_muscle)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Score~poly(Tiempo,5),data=datos_alineamiento_muscle)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Score~poly(Tiempo,2),data=datos_alineamiento_muscle)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_muscle, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_muscle$Tiempo),
+            y = max(datos_alineamiento_muscle$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+## 7. Análisis de Regresión de Tiempo vs Score por Simulated Annealing 
+
+```{r}
+# PRIMERO TIEMPO VS SCORE 
+# Score creciente cuando el Tiempo computacional aumenta para el Algoritmo de simulated Annealing
+# Regresión Lineal 
+reg.lineal<-lm(Tiempo~Score,data=datos_alineamiento_simulated)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Score),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Score)),data=datos_alineamiento_simulated)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Score),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Score),data=datos_alineamiento_simulated)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Score),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Score,5),data=datos_alineamiento_simulated)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Score),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Score,2),data=datos_alineamiento_simulated)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Score),
+            y = max(datos_alineamiento_simulated$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO SCORE VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Score~Tiempo,data=datos_alineamiento_simulated)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+#reg.exp<-lm(Score~I(exp(Tiempo)),data=datos_alineamiento_simulated)
+#summary(reg.exp)$adj.r.squared
+
+#ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+#  geom_point() +
+#  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+#  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+#       x = "\nTiempo (seg)\n",
+#       y = "\nScore (unidades arbitrárias)\n") +
+#  #theme_minimal() +
+#  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+#            x = max(datos_alineamiento_simulated$Tiempo),
+#            y = max(datos_alineamiento_simulated$Score),
+#            hjust = 2.7, #avanza en x
+#            vjust = 5) + #avanza en y
+#geom_text(vjust = -0.5, hjust = -0.5) +
+#theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamiento_simulated)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Score~poly(Tiempo,5),data=datos_alineamiento_simulated)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Score~poly(Tiempo,2),data=datos_alineamiento_simulated)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_simulated, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_simulated$Tiempo),
+            y = max(datos_alineamiento_simulated$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+## 8. Análisis de Regresión de Tiempo vs Score por Leap Hybrid Sampler
+
+```{r}
+# PRIMERO TIEMPO VS SCORE 
+# Score creciente cuando el Tiempo computacional aumenta para el Algoritmo de Leap Hybrid Sampler
+# Regresión Lineal 
+reg.lineal<-lm(Tiempo~Score,data=datos_alineamiento_leap)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Score),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Tiempo~I(exp(Score)),data=datos_alineamiento_leap)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Score),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN LOGARÍTMICA
+reg.log<-lm(Tiempo~log(Score),data=datos_alineamiento_leap)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Score),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5 
+reg.cuadratica5<-lm(Tiempo~poly(Score,5),data=datos_alineamiento_leap)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Score),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Tiempo~poly(Score,2),data=datos_alineamiento_leap)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Score, y = Tiempo, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nScore (unidades arbitrárias)\n",
+       y = "\nTiempo (seg)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Score),
+            y = max(datos_alineamiento_leap$Tiempo),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# SEGUNDO SCORE VS TIEMPO
+
+# Regresión Lineal 
+reg.lineal<-lm(Score~Tiempo,data=datos_alineamiento_leap)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") + 
+  labs(title = "Regresión Lineal entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.lineal)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+# REGRESIÓN EXPONENCIAL
+reg.exp<-lm(Score~I(exp(Tiempo)),data=datos_alineamiento_leap)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ exp(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Exponencial entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.exp)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN LOGARÍTMICA 
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamiento_leap)
+summary(reg.log)$adj.r.squared
+
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ log(x), se = FALSE, color = "red") + 
+  labs(title = "Regresión Logarítmica entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.log)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 5
+reg.cuadratica5<-lm(Score~poly(Tiempo,5),data=datos_alineamiento_leap)
+summary(reg.cuadratica5)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 5), se = FALSE, color = "red") + 
+  labs(title = "Regresión de Polinomio de grado 5 entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica5)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+
+
+# REGRESIÓN POLINOMIO DE GRADO 2 
+reg.cuadratica2<-lm(Score~poly(Tiempo,2),data=datos_alineamiento_leap)
+summary(reg.cuadratica2)$adj.r.squared
+
+ggplot(datos_alineamiento_leap, aes(x = Tiempo, y = Score, label = as.character(Num))) +
+  geom_point() +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE, color = "red") + 
+  labs(title = "Regresión Cuadrática entre Score y Tiempo\n",
+       x = "\nTiempo (seg)\n",
+       y = "\nScore (unidades arbitrárias)\n") +
+  #theme_minimal() +
+  geom_text(aes(label = paste("R^2 =", round(summary(reg.cuadratica2)$adj.r.squared, 4))),
+            x = max(datos_alineamiento_leap$Tiempo),
+            y = max(datos_alineamiento_leap$Score),
+            hjust = 2.7, #avanza en x
+            vjust = 5) + #avanza en y
+geom_text(vjust = -0.5, hjust = -0.5) +
+theme( plot.title = element_text(color="black", size=12, face="bold", hjust = 0.5))
+```
+
+
+
+# ANOVA 1
+gráfica de barras con media y desviación estandar
+marcando las diferencias 
+Elegir con cual numero de secuencias quiero hacerlo
+igual que en el excel 
+solo varie por algoritmo 
+y el eje y sea tiempo en segundos 
+y se coloque los astediscos por diferencias significativ
+
+## Estadísticos
+Se calculo los estadísticos descriptivos por grupo de secuencias a alinear, ya que cada tabla representa a la cantidad de secuencias que se ha alineado. 
+
+En la primera tabla se encuentra la menor cantidad de secuencias que se alineo, es decir, 2 secuencias, y en la última la mayor cantidad de secuencias que se alineo que es 45.
+```{r}
+# Estadísticos ClustalW
+esta_grup_clustalw <- describeBy(datos_alineamiento_clustalw,datos_alineamiento_clustalw$Num)
+esta_grup_clustalw
+
+# Estadísticos MUSCLE
+esta_grup_muscle <- describeBy(datos_alineamiento_muscle,datos_alineamiento_muscle$Num)
+esta_grup_muscle
+
+# Estadísticos Simulated Annealing 
+esta_grup_simulated <- describeBy(datos_alineamiento_simulated,datos_alineamiento_simulated$Num)
+esta_grup_simulated
+
+# Estadísticos Leap Hybrid Sampler
+#esta_grup_leap <- describeBy(datos_alineamiento_leap,datos_alineamiento_leap$Num)
+#esta_grup_leap
+```
+
+## Filtrar por # de secuencias
+Filtrar por un cierto número de secuencias alineadas: Se eligió 45 y 5 
+```{r}
+# Data con 45 secuencias de alineamiento
+
+# General con 45 secuencias
+datos_alineamiento_45 <- datos_alineamiento %>% filter(Num == "45")
+
+# Clustalw con 45 secuencias 
+datos_alineamiento_clustalw45 <- datos_alineamiento_clustalw %>% filter(Num == "45")
+
+# Data Clustalw
+datos_alineamiento_muscle45 <- datos_alineamiento_muscle %>% filter(Num == "45")
+
+# Data Clustalw
+datos_alineamiento_simulated45 <- datos_alineamiento_simulated %>% filter(Num == "45")
+
+# Data Clustalw
+#datos_alineamiento_leap45 <- datos_alineamiento_leap %>% filter(Num == "45")
+```
+
+```{r}
+# Data con 5 secuencias de alineamiento
+```
+
+
+
+## Estadísticos por Algoritmo respecto a 45 secuencias alineadas
+```{r}
+# Estadísticos General
+esta_grup_general <- describeBy(datos_alineamiento_45,datos_alineamiento_45$Algoritmo)
+esta_grup_general
+
+```
+
+## Boxplot
+
+El segundo paso es visualizar los datos de forma en que se encuentren o no datos atípicos. Estos outliers pueden influir negativamente en los resultados del ANOVA.
+
+```{r}
+ggplot(datos_alineamiento_45, aes(x = Algoritmo, y = Tiempo)) +
+  geom_boxplot() +
+  labs(title = "                              Boxplot de Tiempo por Algoritmo\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nTiempo (seg)\n") 
+  #geom_text(vjust = -0.5, hjust = -0.5) 
+  #theme_minimal()
+```
+## Boxplot por cada algoritmo 
+```{r}
+# BOXPLOT CLUSTALW
+ggplot(datos_alineamiento_clustalw45, aes(x = Algoritmo, y = Tiempo)) +
+  geom_boxplot() +
+  labs(title = "          Boxplot de Tiempo computacional de Alineamiento de ClustalW\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nTiempo (seg)\n") 
+
+# BOXPLOT MUSCLE
+ggplot(datos_alineamiento_muscle45, aes(x = Algoritmo, y = Tiempo)) +
+  geom_boxplot() +
+  labs(title = "          Boxplot de Tiempo computacional de Alineamiento de MUSCLE\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nTiempo (seg)\n") 
+
+# BOXPLOT SIMULATED ANNEALING 
+ggplot(datos_alineamiento_simulated45, aes(x = Algoritmo, y = Tiempo)) +
+  geom_boxplot() +
+  labs(title = "          Boxplot de Tiempo computacional de Simulated Annealing\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nTiempo (seg)\n") 
+
+# BOXPLOT LEAP HYBRID SAMPLER
+#ggplot(datos_alineamiento_leap45, aes(x = Algoritmo, y = Tiempo)) +
+#  geom_boxplot() +
+#  labs(title = "          Boxplot de Tiempo computacional de Leap Hybrid Sampler\n",
+#       x = "\nAlgoritmo de alineamiento\n",
+#       y = "\nTiempo (seg)\n") 
+```
+## Prueba de Normalidad: Shapiro-Wilks 
+
+Este tipo de prueba funciona bien para conjuntos de datos pequeños. Para esta prueba se coloca como hipótesis nula a que los datos siguen una distribución normal, y la alternativa que no lo hacen. Eso quiere decir que si el p-valor de la prueba es menor a 0.05 se rechaza la hipótesis nula, y se da como respuesta que cada grupo de estudio no sigue una distribución normal. Por el contrario, si el p-valor es mayor a 0.05 se estaría cumpliendo con la distribución normal de los datos.
+
+```{r}
+# Shapiro-Wilk normality test for time general
+shapiro.test(datos_alineamiento_45$Tiempo)
+```
+El p-valor es muy pequeño (2.983e-09), por lo que se concluye que hay evidencia suficiente para rechazar la hipótesis nula de normalidad. Esto sugiere que la variable Tiempo no sigue una distribución normal respecto a los diferentes Algoritmo habiendo alineado 45 secuencias cada uno.
+
+Entonces, la variable Tiempo no sigue una distribución normal. Esto sugiere que los datos no están simétricamente distribuidos alrededor de la media, como sería el caso en una distribución normal, estan dispersos por cada uno de acuerdo al algoritmo da datos distintos.
+
+### Shapiro Wilks por Algoritmo habiendo alineado 45 secuencias cada uno
+```{r}
+# Shapiro-Wilk normality test for time
+by(datos_alineamiento_45$Tiempo,datos_alineamiento_45$Algoritmo,shapiro.test)
+
+```
+
+Los 4 algoritmos presentan un p-valor superior a 0.05, lo que quiere decir que se cumplen con una distribución normal de la distribución de los datos. 
+
+## Prueba de Homogeneidad de Varianza
+
+### Bartlett test
+Comprueba que las varianzas de la respuesta en cada grupo son iguales.
+Por lo que, para esta prueba la hipótesis nula quiere decir que los datos presentan homogeneidad de varianza entre los grupos. De esa manera, si el p-valor es inferior a 0.05 no se cumple este supuesto. Pero si en cambio el p-valor es mayor a 0.05 existe homogeneidad de varianza. 
+
+
+```{r}
+bartlett.test(datos_alineamiento_45$Tiempo,datos_alineamiento_45$Algoritmo)
+
+```
+El test servia para comparar la variabilida en la variable tiempo entre los grupos definifos por la variable Algoritmo.
+
+Para el test de Bartlett, se observa que el p-valor es extremadamente bajo a 0.05 por lo que  no se cumple la hipótesis nula de que los datos presentan homogeneidad de varianza entre los grupos y se indica que hay una diferencia significativa en las varianzas entre los distintos algoritmos que alinearon 45 secuencias.
+
+## ANOVA DE WELCH
+Cuando se viola el supuesto de varianzas iguales, se procede a realizar el ANOVA de Welch.
+
+```{r}
+oneway.test(Tiempo~Algoritmo,datos_alineamiento_45)
+```
+
+El One-way test, que más bien se utiliza cuando se asume que las varianzas entre grupos no son iguales debido a los resultados del test de Bartlett. Dicho esto, se observa que el valor de F es extremadamente alto se sugiere que hay diferencias significativas entre al menos dos de los grupos en términos de la variable "tiempo". Asimismo, el p-value es muy bajo, lo que indica que al menos un grupo es significativamente diferente de los demás en términos de la variable tiempo.
+
+En resumen, los resultados sugieren que hay diferencias significativas en la variable Tiempo entre al menos dos grupos definidos por la variable Algoritmo. Es decir, al menos un par de algoritmos tienen medias de tiempo diferentes alineando 45 secuencias.
+
+## ANOVA R 
+La prueba de ANOVA permite conocer si existen diferencias entre los grupos. En este caso, el siguiente codigo ajusta un modelo ANOVA unidireccional a los datos para determinar si los valores medios de cada grupo son iguales.
+
+```{r}
+# RESULTADOS DE ANOVA
+analysis <- aov(Tiempo ~ Algoritmo, data=datos_alineamiento_45)
+
+anova_resultados <- summary(analysis)
+anova_resultados
+
+```
+```{r}
+
+# Obtener los resultados de ANOVA
+analysis <- aov(datos_alineamiento_45$Tiempo ~ datos_alineamiento_45$Algoritmo, data = datos_alineamiento_45)
+anova_resultados <- summary(analysis)
+
+# Extraer la información relevante de ANOVA
+anova_table <- as.data.frame(anova_resultados$'datos_alineamiento_45$Algoritmo')
+
+# Crear un data frame con la información de ANOVA
+result_df <- data.frame(
+  Algoritmo = rownames(anova_table),
+  Df = anova_table$Df[1],
+  Sum_Sq = anova_table$Sum.Sq[1],
+  Mean_Sq = anova_table$Mean.Sq[1],
+  F_value = anova_table$F.value[1],
+  Pr = anova_table$`Pr(>F)`[1]
+)
+
+# Calcular los intervalos de confianza con Tukey
+IC <- TukeyHSD(analysis)
+
+# Agregar los resultados de Tukey al data frame manualmente
+result_df <- result_df %>%
+  left_join(as.data.frame(IC$'datos_alineamiento_45$Algoritmo'), by = "Algoritmo")
+
+# Verificar el data frame resultante
+print(result_df)
+
+```
+
+
+Existen diferencias estadísticamente significativas entre los grupos de secuencias. Y dado que el p-valor es menor que 0.05 quiere decir que los valores medios en cada grupo no son iguales.
+
+## PRUEBA POST-HOC
+Esta prueba determina que medias de grupo son diferentes de las otras. En este caso, la prueba de Tukey, permite realizar comparaciones por pares entre las medias de cada grupo mientras se controla la tasa de error familiar.
+
+```{r}
+# Se calculara los intervalos de confianza
+IC <- TukeyHSD(analysis)
+IC
+
+# Se convierte los resultados de Tukey a dataframe
+tukey_df <- as.data.frame(IC$Algoritmo)
+
+# Se combinando los resultados del ANOVA y Tukey para hacer el gráfico 
+result_df <- merge(anova_df, tukey_df, by = "Algoritmo")
+```
+```{r}
+str(IC)
+```
+
+```{r}
+str(anova_resultados)
+```
+
+
+```{r}
+TukeyHSD(analysis, conf.level = 0.95)
+```
+
+En este caso, se realizó una prueba de comparaciones múltiples de Tukey para identificar cuáles Algoritmos son significativamente diferentes entre sí en términos de "Tiempo". Las diferencias son estadísticamente significativas ya que el valor de p es 0 en todas las comparaciones. Asimismo, cada fila en la tabla representa una comparación específica entre dos grupos, y los valores de diff, lwr, upr y p adj te ayudan a interpretar la significancia estadística de esas diferencias.
+
+El valor de p adj igual a 0 significa que esta diferencia es estadísticamente significativa a un nivel de confianza del 95%.
+
+Para visualizar de mejor manera los resultados, estos se pueden graficar:
+
+## OTRA FORMA
+```{r}
+# Realizar ANOVA de Welch
+modelo_welch <- oneway.test(Tiempo ~ Algoritmo, data = datos_alineamiento_45, var.equal = FALSE)
+
+# Obtener resultados del ANOVA de Welch
+welch_resultados <- summary(modelo_welch)
+
+# Crear un dataframe con los resultados
+welch_df <- as.data.frame(welch_resultados)
+
+# Calcular los intervalos de confianza usando un método apropiado para Welch
+IC <- pairwise.t.test(datos_alineamiento_45$Tiempo, datos_alineamiento_45$Algoritmo, p.adjust.method = "none")
+
+# Convertir los resultados de Tukey a un dataframe
+tukey_df <- as.data.frame(IC)
+
+# Combinar los resultados de ANOVA y Tukey
+resultados_finales <- merge(welch_df, tukey_df, by = "Algoritmo")
+
+
+# Crear el gráfico de barras con barras de error
+ggplot(resultados_finales, aes(x = Algoritmo, y = means, fill = Algoritmo)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2, position = position_dodge(0.9)) +
+  labs(title = "Diferencias Significativas entre Algoritmos (ANOVA de Welch)",
+       x = "Algoritmo",
+       y = "Tiempo") +
+  theme_minimal()
+
+```
+
+
+
+# ANOVA 2 : SCORE
+
+## Boxplot
+
+El segundo paso es visualizar los datos de forma en que se encuentren o no datos atípicos. Estos outliers pueden influir negativamente en los resultados del ANOVA.
+
+```{r}
+ggplot(datos_alineamiento_45, aes(x = Algoritmo, y = Score)) +
+  geom_boxplot() +
+  labs(title = "                              Boxplot de Score por Algoritmo\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nScore (unidades arbitrárias)\n") 
+  #geom_text(vjust = -0.5, hjust = -0.5) 
+  #theme_minimal()
+```
+
+## Boxplot por cada algoritmo 
+```{r}
+# BOXPLOT CLUSTALW
+ggplot(datos_alineamiento_clustalw45, aes(x = Algoritmo, y = Score)) +
+  geom_boxplot() +
+  labs(title = "          Boxplot de Score de Alineamiento de ClustalW\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nScore (unidades arbitrárias)\n") 
+
+# BOXPLOT MUSCLE
+ggplot(datos_alineamiento_muscle45, aes(x = Algoritmo, y = Score)) +
+  geom_boxplot() +
+  labs(title = "          Boxplot de Score de Alineamiento de MUSCLE\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nScore (unidades arbitrárias)\n") 
+
+# BOXPLOT SIMULATED ANNEALING 
+ggplot(datos_alineamiento_simulated45, aes(x = Algoritmo, y = Score)) +
+  geom_boxplot() +
+  labs(title = "          Boxplot de Score de Simulated Annealing\n",
+       x = "\nAlgoritmo de alineamiento\n",
+       y = "\nScore (unidades arbitrárias)\n") 
+
+# BOXPLOT LEAP HYBRID SAMPLER
+#ggplot(datos_alineamiento_leap45, aes(x = Algoritmo, y = Score)) +
+#  geom_boxplot() +
+#  labs(title = "          Boxplot de Score de Leap Hybrid Sampler\n",
+#       x = "\nAlgoritmo de alineamiento\n",
+#       y = "\nScore (unidades arbitrárias)\n") 
+```
+## Prueba de Normalidad: Shapiro-Wilks
+```{r}
+# Shapiro-Wilk normality test for score
+shapiro.test(datos_alineamiento_45$Score)
+```
+Regla -> si es mayor a 0.05 sigue una distribución normal
+De los datos obtenidos se observa que tiempo, score y long sigen una tendencia no normal.
+
+En todas las pruebas, los valores p (p-value) son extremadamente bajos (cercanos a cero), lo que sugiere que los datos no siguen una distribución normal. Esto podría indicar que los datos son no normales.
+
+
+### Shapiro-Wilks por Algoritmo
+```{r}
+# Shapiro-Wilk normality test for score
+#by(datos_alineamiento_45$Score,datos_alineamiento_45$Algoritmo,shapiro.test)
+```
+
+Se marca error, porque los valores del score en cada Algoritmo por separado son iguales al alinear 45 secuencias 
+
+## Prueba de Homogeneidad de Varianza
+
+### Bartlett test
+Comprueba que las varianzas de la respuesta en cada grupo son iguales.
+Por lo que, para esta prueba la hipótesis nula quiere decir que los datos presentan homogeneidad de varianza entre los grupos. De esa manera, si el p-valor es inferior a 0.05 no se cumple este supuesto. Pero si en cambio el p-valor es mayor a 0.05 existe homogeneidad de varianza. 
+
+
+```{r}
+bartlett.test(datos_alineamiento_45$Score,datos_alineamiento_45$Algoritmo)
+```
+Se obtiene NA porque no cumple con los requerimientos para hacer esta prueba
+
+## ANOVA DE WELCH
+Cuando se viola el supuesto de varianzas iguales, se procede a realizar el ANOVA de Welch.
+
+```{r}
+oneway.test(Score~Algoritmo,datos_alineamiento_45)
+```
+La varianza interna entre grupos es igual a 0. De esa manera, el estadístico F se calcula dividiendo la variabilidad entre los grupos por la variabilidad dentro de los grupos. Sin embargo, si la variabilidad dentro de los grupos es prácticamente nula (denominador igual a cero), o si hay problemas en los datos, como la presencia de valores faltantes o la falta de varianza en alguna de las categorías, la prueba puede no proporcionar resultados válidos.
+
+En este caso la varianza de cada grupo interno es lo que falla
+
+
+## ANOVA R 
+La prueba de ANOVA permite conocer si existen diferencias entre los grupos. En este caso, el siguiente codigo ajusta un modelo ANOVA unidireccional a los datos para determinar si los valores medios de cada grupo son iguales.
+
+```{r}
+# RESULTADOS DE ANOVA
+analysis2 <- aov(datos_alineamiento_45$Score ~ datos_alineamiento_45$Algoritmo, data=datos_alineamiento_45)
+anova_resultados2 <- summary(analysis2)
+anova_resultados2
+
+# Se crea dataframe a partir de los resultados de ANOVA
+# anova_df <- as.data.frame(anova_resultados$'Algoritmo')
+```
+
+# Prueba Post-Hoc
+
+```{r}
+# Se calculara los intervalos de confianza
+IC2 <- TukeyHSD(analysis2)
+IC2
+```
+
+
+
+
+
+
+
+

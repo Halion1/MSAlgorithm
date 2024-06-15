@@ -1,0 +1,16 @@
+# Multiple Alignment Algorithms
+
+These scripts are part of a larger project comparing the capabilities of standard Multiple Sequence Alignment (MSA) algorithms to a novel algorithm utilizing a quantum computing framework. This section focuses on the construction of the MSA algorithms.
+
+\subsection{Clustal W}
+
+Clustal W, an extension of the original Clustal series, adopts a progressive alignment strategy. It initially performs pairwise alignments and then builds a guide tree to align these pairs hierarchically. Key enhancements in Clustal W include sequence weighting and both general and position-specific gap penalties, which collectively improve alignment accuracy for sequences with significant divergence and mitigate biases from overrepresented sequences \cite{}. For nucleotide sequences, ClustalW adopts a match/mismatch scoring system. This system assigns positive scores for nucleotide matches, incentivizing alignments of identical bases due to their evolutionary conservation. Mismatches are penalized with negative or lower positive scores, reflecting their lower likelihood of conservation \cite{}. 
+
+In terms of computational complexity, Clustal W's operations can be divided into three stages. The first stage involves all-against-all pairwise alignments for $n$ sequences, amounting to $\frac{n(n-1)}{2}$ pairwise comparisons. Given the time complexity of $O(L^{2})$ for each pairwise alignment of sequences of length $L$, the resulting complexity is of $O(n^{2} L^{2})$. For the second step, NJ or UPGMA is commonly used for the construction of the guide tree. In this case, the complexity can vary between $O(n^{2})$ and $O(n^{3})$, respectively. Finally, the progressive alignment incurs a complexity of approximately $O(n^{2} L^{2})$ in the worst-case scenario. Consequently, the overall complexity of ClustalW is predominantly influenced by the quadratic relationship of the number of sequences and their lengths \cite{}.
+
+\subsection{MUSCLE}
+
+The Multiple Sequence Comparison by Log-Expectation (MUSCLE) algorithm excels in executing large-scale alignments, noted for its rapid and efficient processing \cite{}. Its core is an iterative refinement process, systematically improving the consensus alignment. Initially, MUSCLE generates a draft alignment via progressive alignment, forming a guide tree from a sequence-derived distance matrix, utilizing k-mer counting for sequence similarity assessment. In its subsequent phase, MUSCLE refines this alignment by modifying the guide tree and realigning sequences accordingly. The iterative refinement phase then adjusts alignment segments through tree-dependent restricted partitioning, culminating in the final alignment. This phase critically involves Sum-of-Pairs (SP) scoring, aggregating pairwise scores for a comprehensive alignment evaluation \cite{}.
+
+The algorithm's computational complexity, considering its multi-stage nature, resists simple encapsulation. Typically, in large data sets with lengthy sequences, time complexity may reach $O(n^{2}L^{2})$, with $n$ as the sequence count and $L$ as the average sequence length \cite{}. Space complexity is also notable, necessitating storage of distance matrices, guide trees, and alignments, indicative of MUSCLE's sophisticated design for handling complex bioinformatics alignment tasks \cite{}.
+
