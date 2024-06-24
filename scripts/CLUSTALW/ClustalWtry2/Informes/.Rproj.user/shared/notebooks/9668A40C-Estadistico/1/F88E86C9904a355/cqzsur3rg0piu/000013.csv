@@ -1,0 +1,8 @@
+"0",""
+"0","#Varianza"
+"0",""
+"0","ggplot(data = tiempo_longitud, aes(x=var, y=value.y))+"
+"0","  geom_line()+"
+"0","  geom_point()+"
+"0","    ylab(""Tiempo (mean)"") + "
+"0","    xlab(""Longitud (var)"") "

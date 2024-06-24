@@ -1,0 +1,482 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+Instalación de Librerias
+```{r}
+library(jsonlite)
+library(psych)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+```
+
+Carga de datos
+```{r}
+# Ruta a la carpeta que contiene los archivos JSON
+carpeta <- "Alineamientos"
+
+# Obtener la lista de archivos en la carpeta
+archivos <- list.files(path = carpeta, pattern = ".json", full.names = TRUE)
+
+# Crear una tabla para almacenar los datos de los archivos JSON
+datos_alineamientos <- data.frame()
+
+# Iterar sobre cada archivo y leer su contenido JSON
+for (archivo in archivos) {
+  # Leer el contenido del archivo JSON
+  contenido <- read_json(archivo)
+  contenido$Alineamiento$num <- length(contenido$Cadenas)
+  nuevos_datos_df <- as.data.frame(contenido$Alineamiento)
+  nuevos_datos_df$Data = list(unlist(lapply(contenido$Cadenas, function(x) x[[1]])))
+  
+  datos_alineamientos<-rbind(nuevos_datos_df,datos_alineamientos)
+}
+datos_alineamientos_n <- datos_alineamientos[,c("Tiempo","Score","Long","num")]
+```
+
+# Box Plot
+
+```{r}
+boxplot(datos_alineamientos_n$Score)
+boxplot(datos_alineamientos_n$Tiempo)
+boxplot(datos_alineamientos_n$Long)
+```
+
+
+# Estadisticos
+
+```{r}
+esta_grup <- describeBy(datos_alineamientos_n,datos_alineamientos_n$num)
+esta_grup
+# Indexado Estadistico
+# esta_grup_tiempo[["5"]][["sd"]]
+```
+
+
+# Analisis de correlacion
+
+```{r}
+# Shapiro-Wilk normality test for mpg
+shapiro.test(datos_alineamientos_n$Tiempo)
+# Shapiro-Wilk normality test for wt
+shapiro.test(datos_alineamientos_n$Score)
+
+shapiro.test(datos_alineamientos_n$Long)
+```
+Regla -> si es mayor a 0.05 se normal
+De los datos obtenidos se observa que tiempo, score y long sigen una tendencia no normal
+
+```{r}
+
+# si es menor a 0.05 se acepta la tau (cor)
+cor_tiem_scor=cor.test(datos_alineamientos_n$Score, datos_alineamientos_n$Tiempo,  method="kendall")
+cor_tiem_scor
+cor_tiem_long=cor.test(datos_alineamientos_n$Tiempo, datos_alineamientos_n$Long,  method="kendall")
+cor_tiem_long
+cor_long_score=cor.test(datos_alineamientos_n$Long, datos_alineamientos_n$Score,  method="kendall")
+cor_long_score
+```
+# Analisis de regresion
+
+## Tiempo y Score
+```{r}
+
+
+reg.lineal<-lm(Tiempo~Score,data=datos_alineamientos_n)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamientos_n, aes(x = Score, y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+reg.exp<-lm(Tiempo~I(exp(Score)),data=datos_alineamientos_n)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamientos_n, aes(x =exp(Score), y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+reg.log<-lm(Tiempo~log(Score),data=datos_alineamientos_n)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamientos_n, aes(x =log(Score), y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamientos_n)
+summary(reg.log)$adj.r.squared
+
+
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamientos_n)
+summary(reg.log)$adj.r.squared
+
+reg.cuadratica<-lm(Tiempo~poly(Score,5),data=datos_alineamientos_n)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n, aes(x = Score, y = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Score = x)), color = "red")
+
+datos_alineamientos_n_mayor5 = filter(datos_alineamientos_n, Score < 0.982)
+
+reg.cuadratica<-lm(Tiempo~poly(Score,2),data=datos_alineamientos_n_mayor5)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_mayor5, aes(x = Score, y = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Score = x)), color = "red")
+
+reg.cuadratica<-lm(Score~poly(Tiempo,5),data=datos_alineamientos_n)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n, aes(y = Score, x = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Tiempo = x)), color = "red")
+
+reg.cuadratica<-lm(Score~poly(Tiempo,2),data=datos_alineamientos_n_mayor5)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_mayor5, aes(y = Score, x = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Tiempo = x)), color = "red")
+
+```
+## Tiempo y Long
+```{r}
+datos_alineamientos_n_s_long = filter(datos_alineamientos_n, Long >= 29867)
+
+reg.lineal<-lm(Tiempo~Long,data=datos_alineamientos_n_s_long)
+summary(reg.lineal)$adj.r.squared
+
+datos_alineamientos_n_s_long$Prediccion <- predict(reg.lineal)
+
+ggplot(datos_alineamientos_n_s_long, aes(x = Long, y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+
+reg.exp<-lm(Tiempo~log(Long,base = exp(10)),data=datos_alineamientos_n_s_long)
+summary(reg.exp)$adj.r.squared
+
+datos_alineamientos_n_s_long$Prediccion_exp <- exp(predict(reg.exp))
+
+
+ggplot(datos_alineamientos_n_s_long, aes(x = log(Long), y = Tiempo)) +
+  geom_point()+  # Gráfico de dispersión
+  geom_smooth(method='lm')
+    
+
+reg.polinomial<-lm(Tiempo~poly(Long,2),data=datos_alineamientos_n_s_long)
+summary(reg.polinomial)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = Long, y = Tiempo)) +
+  geom_point() +
+  stat_function(fun = function(x) predict(reg.polinomial, data.frame(Long = x)), color = "red")
+  
+#reg.exp<-lm(Long~I(exp(Tiempo)),data=datos_alineamientos_n_s_long)
+#summary(reg.exp)$adj.r.squared
+
+#reg.log<-lm(Long~log(Tiempo),data=datos_alineamientos_n_s_long)
+#summary(reg.log)$adj.r.squared
+
+#ggplot(data = datos_alineamientos_n_s_long, aes(y = Long, x = Tiempo)) +
+  #geom_point() +
+  #stat_function(fun = function(x) predict(reg.log, data.frame(Tiempo = x)), color = "red")
+
+#reg.polinomial<-lm(Long~poly(Tiempo,7),data=datos_alineamientos_n_s_long)
+#summary(reg.polinomial)$adj.r.squared
+
+#ggplot(data = datos_alineamientos_n_s_long, aes(y = Long, x = Tiempo)) +
+  #geom_point() +
+  #stat_function(fun = function(x) predict(reg.polinomial, data.frame(Tiempo = x)), color = "red")
+
+tiempo_longitud$Tiempo = tiempo_longitud$value.y
+tiempo_longitud$Long = tiempo_longitud$value.x
+reg.polinomial2<-lm(Tiempo~poly(Long,3),data=tiempo_longitud)
+summary(reg.polinomial)$adj.r.squared
+
+ggplot(data = tiempo_longitud, aes(x = Long, y = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.polinomial2, data.frame(Long = x)), color = "red")
+
+```
+## Score y Long
+```{r}
+
+
+
+
+reg.lineal<-lm(Score~Long,data=datos_alineamientos_n_s_long)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = Long, y = Score)) +
+  geom_point() +
+  stat_function(fun = function(x) predict(reg.lineal, data.frame(Long = x)), color = "red")
+
+#reg.exp<-lm(Score~(exp(Long)),data=datos_alineamientos_n_s_long)
+#summary(reg.exp)$adj.r.squared
+
+reg.log<-lm(Score~log(Long),data=datos_alineamientos_n_s_long)
+summary(reg.log)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = log(Long), y = Score)) +
+  geom_point() +
+  geom_smooth(method='lm')
+
+reg.cuadratica<-lm(Score~poly(Long,2),data=datos_alineamientos_n_s_long)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = Long, y = Score)) +
+  geom_point() +
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Long = x)), color = "red")
+
+#reg.exp<-lm(Long~(exp(Score)),data=datos_alineamientos_n_s_long)
+#summary(reg.exp)$adj.r.squared
+
+#reg.log<-lm(Long~log(Score),data=datos_alineamientos_n_s_long)
+#summary(reg.log)$adj.r.squared
+
+#reg.cuadratica<-lm(Long~poly(Score,2),data=datos_alineamientos_n_s_long)
+#summary(reg.cuadratica)$adj.r.squared
+
+score_longitud$Score = score_longitud$value.y
+score_longitud$Long = score_longitud$value.x
+reg.polinomial2<-lm(Score~poly(Long,2),data=score_longitud)
+summary(reg.polinomial)$adj.r.squared
+
+ggplot(data = score_longitud, aes(x = Long, y = Score)) +
+  geom_point()+
+  stat_function(fun = function(x) predict(reg.polinomial2, data.frame(Long = x)), color = "red")
+```
+
+# Anova de una via
+
+```{r}
+
+boxplot(poly(Tiempo,5)~num,data=datos_alineamientos_n)
+boxplot(poly(Score,3)~num,data=datos_alineamientos_n)
+boxplot(Long~num,data=datos_alineamientos_n)
+```
+```{r}
+# Shapiro-Wilk normality test for mpg
+by(datos_alineamientos_n$Tiempo,datos_alineamientos_n$num,shapiro.test)
+# Shapiro-Wilk normality test for wt
+#by(datos_alineamientos_n$Score,datos_alineamientos_n$num,shapiro.test)
+
+#by(datos_alineamientos_n$Long,datos_alineamientos_n$num,shapiro.test)
+
+
+
+```
+
+```{r}
+bartlett.test(datos_alineamientos_n$Tiempo,datos_alineamientos_n$num)
+
+oneway.test(Tiempo~num,datos_alineamientos_n)
+```
+
+
+# Grafica de barras y sd por grupos para cada variable
+
+## Gráfica tiempo computacional promedio para cada número de secuencias
+
+```{r}
+generar_value_vector <- function(esta_grup,estadistico, lista,variable) {
+  # Crear un vector para almacenar los valores
+  value_vector <- numeric(length(lista))
+  j <-1
+  # Iterar desde 'start' hasta 'end'
+  for (i in lista) {
+    # Obtener el valor mean correspondiente
+    value_vector[j] <- esta_grup[[as.character(i)]][[estadistico]][variable]
+    j <-j+1
+  }
+
+  return(value_vector)
+}
+
+estadi_tiempo <- data.frame(
+  name=unique(datos_alineamientos_n$num),
+  value=generar_value_vector(esta_grup,"mean",unique(datos_alineamientos_n$num),1),
+  sd=generar_value_vector(esta_grup,"sd",unique(datos_alineamientos_n$num),1)
+)
+
+estadi_tiempo<-estadi_tiempo[order(estadi_tiempo$name),]
+
+ggplot(estadi_tiempo) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5)+
+    xlab("\nNúmero de secuencias\n") + 
+    ylab("\nTiempo (seg)\n") +
+    ggtitle(" Tiempo de procesamiento computacional con el número de secuencias crecientes\n")+ 
+  theme( plot.title = element_text(color="black", size=11, face="bold.italic"))
+
+```
+
+## Gráfica score para cada número de secuencias
+```{r}
+
+estadi_score <- data.frame(
+  name=unique(datos_alineamientos_n$num),
+  value=generar_value_vector(esta_grup,"mean",unique(datos_alineamientos_n$num),2),
+  sd=generar_value_vector(esta_grup,"sd",unique(datos_alineamientos_n$num),2)
+)
+
+estadi_score <- estadi_score[order(estadi_score$name),]
+
+ggplot(estadi_score) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5)+
+    xlab("\nNúmero de secuencias\n") + 
+    ylab("\nScore (unidades arbitrarías)\n") +
+    ggtitle("       Baja varabilidad del score con diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=13, face="bold.italic"))
+
+```
+## Gráfica de Validación: longitud de la secuencias con el número de secuencias a alinear
+```{r}
+
+estadisticos_longitudes_cadenas <- lapply(unique(datos_alineamientos$Data), function(sublista) {
+  # Calcular promedio y desviación estándar de la sublista
+  promedio <- mean(sublista)
+  desviacion_estandar <- sd(sublista)
+  name <-length(sublista)
+  var <-var(sublista)
+  # Devolver el resultado como un data.frame
+  c(name,promedio,desviacion_estandar,var)
+})
+
+estadisticos_longitudes_cadenas <-do.call(rbind, estadisticos_longitudes_cadenas)
+
+estadi_longitud <- data.frame(
+  name=estadisticos_longitudes_cadenas[,1],
+  value=estadisticos_longitudes_cadenas[,2],
+  sd=estadisticos_longitudes_cadenas[,3],
+  var=estadisticos_longitudes_cadenas[,4]
+)
+
+estadi_longitud <- estadi_longitud[order(estadi_longitud$name),]
+
+ggplot(estadi_longitud) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5) + 
+  geom_text(aes(x=name, y=value, label=round(value,2)), vjust=-0.5) +
+    xlab("\nNúmero de secuencias\n") + 
+    ylab("\nLongitud de la secuencia\n") +
+    ggtitle(" Longitud de secuencias poco significativa frente a diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=11, face="bold.italic"))
+
+```
+## Gráficas de tiempo vs longitud: media, desviación estándar y varianza 
+```{r}
+
+
+tiempo_longitud<-merge(estadi_longitud, estadi_tiempo, by = "name", all = TRUE)
+tiempo_longitud<- filter(tiempo_longitud, value.x >= 29846)
+ggplot(data = tiempo_longitud, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (mean)")
+
+
+#sd 
+
+ggplot(data = tiempo_longitud, aes(x=sd.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (sd)") 
+
+#Varianza
+
+ggplot(data = tiempo_longitud, aes(x=var, y=value.y))+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nTiempo (seg)\n") + 
+    xlab("\nVariación de la longitud de secuencias\n") +
+  ggtitle("        Tendencia decreciente del tiempo a mayor variación de longitud de las secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=11, face="bold.italic"))
+```
+## Gráficas de tiempo vs score: media, desviación estándar y varianza
+```{r}
+tiempo_score <-merge(estadi_score, estadi_tiempo, by = "name", all = TRUE)
+
+# Gráfica de Tiempo medio vs Score media
+ggplot(data = tiempo_score, aes(x=value.x, y=value.y))+ 
+  geom_smooth(method=lm, se=FALSE, linetype="dashed",color="darkred")+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nTiempo (seg)\n") + 
+    xlab("\nScore (unidades arbitrárias)\n") +
+    ggtitle("Tiempo computacional inversamente proporcional al score de diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=10, face="bold.italic"))
+
+ggplot(data = tiempo_score, aes(x=value.y, y=value.x+I(value.x^2)))+ 
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nTiempo (seg)\n") + 
+    xlab("\nScore (unidades arbitrárias)\n") +
+    ggtitle("Tiempo computacional inversamente proporcional al score de diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=10, face="bold.italic"))
+
+ggplot(data = tiempo_score, aes(x=value.x, y=sd.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (sd)") + 
+    xlab("Score (mean)")
+```
+## Gráficas de score vs longitud: media, desviación estándar y varianza
+```{r}
+
+
+score_longitud<-merge(estadi_longitud, estadi_score, by = "name", all = TRUE)
+score_longitud<- filter(score_longitud, value.x >= 29846)
+ggplot(data = score_longitud, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (mean)")
+
+
+#sd 
+
+ggplot(data = score_longitud, aes(x=sd.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (sd)") 
+
+#Varianza
+
+ggplot(data = score_longitud, aes(x=var, y=value.y))+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nScore (unidad arbitrária)\n") + 
+    xlab("\nVariabilidad de la longitud de secuencias\n") +
+  ggtitle("Incremento de la variabilidad de la longitud de secuencias frente a la tendencia creciente del score a\n") + 
+  theme( plot.title = element_text(color="black", size=10, face="bold.italic"))
+```
+## Gráficas de tiempo vs score: media, desviación estándar y varianza
+```{r}
+tiempo_score <-merge(estadi_score, estadi_tiempo, by = "name", all = TRUE)
+
+ggplot(data = tiempo_score, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Score (mean)")
+
+ggplot(data = tiempo_score, aes(x=value.x, y=sd.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (sd)") + 
+    xlab("Score (mean)")
+```

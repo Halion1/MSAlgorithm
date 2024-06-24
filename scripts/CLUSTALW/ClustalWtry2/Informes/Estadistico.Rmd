@@ -1,0 +1,675 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+Instalación de Librerias
+```{r}
+library(jsonlite)
+library(psych)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(rapportools)
+```
+
+Carga de datos
+```{r}
+# Ruta a la carpeta que contiene los archivos JSON
+carpeta <- "Alineamientos"
+
+# Obtener la lista de archivos en la carpeta
+archivos <- list.files(path = carpeta, pattern = ".json", full.names = TRUE)
+
+# Crear una tabla para almacenar los datos de los archivos JSON
+datos_alineamientos <- data.frame()
+
+# Iterar sobre cada archivo y leer su contenido JSON
+for (archivo in archivos) {
+  # Leer el contenido del archivo JSON
+  contenido <- read_json(archivo)
+  contenido$Alineamiento$num <- length(contenido$Cadenas)
+  nuevos_datos_df <- as.data.frame(contenido$Alineamiento)
+  nuevos_datos_df$Data = list(unlist(lapply(contenido$Cadenas, function(x) x[[1]])))
+  
+  datos_alineamientos<-rbind(nuevos_datos_df,datos_alineamientos)
+}
+datos_alineamientos_n <- datos_alineamientos[,c("Tiempo","Score","Long","num")]
+```
+
+
+# Estadisticos
+
+Se calculo los estadísticos descriptivos por grupo de secuencias a alinear, ya que cada tabla representa a la cantidad de secuencias que se ha alineado. 
+
+En la primera tabla se encuentra la menor cantidad de secuencias que se alineo, es decir, 5 secuencias, y en la última la mayor cantidad de secuencias que se alineo que es 18.
+```{r}
+esta_grup <- describeBy(datos_alineamientos_n,datos_alineamientos_n$num)
+esta_grup
+# Indexado Estadistico
+# esta_grup_tiempo[["5"]][["sd"]]
+```
+
+# Grafica de barras y sd por grupos para cada variable
+
+## Gráfica tiempo computacional promedio para cada número de secuencias
+
+```{r}
+generar_value_vector <- function(esta_grup,estadistico, lista,variable) {
+  # Crear un vector para almacenar los valores
+  value_vector <- numeric(length(lista))
+  j <-1
+  # Iterar desde 'start' hasta 'end'
+  for (i in lista) {
+    # Obtener el valor mean correspondiente
+    value_vector[j] <- esta_grup[[as.character(i)]][[estadistico]][variable]
+    j <-j+1
+  }
+
+  return(value_vector)
+}
+
+estadi_tiempo <- data.frame(
+  name=unique(datos_alineamientos_n$num),
+  value=generar_value_vector(esta_grup,"mean",unique(datos_alineamientos_n$num),1),
+  sd=generar_value_vector(esta_grup,"sd",unique(datos_alineamientos_n$num),1)
+)
+
+estadi_tiempo<-estadi_tiempo[order(estadi_tiempo$name),]
+
+ggplot(estadi_tiempo) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, linewidth=0.5)+
+    xlab("\nNúmero de secuencias\n") + 
+    ylab("\nTiempo (seg)\n") +
+    ggtitle(" Tiempo de procesamiento computacional creciente con el número de secuencias\n")+ 
+  theme( plot.title = element_text(color="black", size=11, face="bold.italic"))
+
+```
+
+## Gráfica score para cada número de secuencias
+```{r}
+
+estadi_score <- data.frame(
+  name=unique(datos_alineamientos_n$num),
+  value=generar_value_vector(esta_grup,"mean",unique(datos_alineamientos_n$num),2),
+  sd=generar_value_vector(esta_grup,"sd",unique(datos_alineamientos_n$num),2)
+)
+
+estadi_score <- estadi_score[order(estadi_score$name),]
+
+ggplot(estadi_score) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5)+
+    xlab("\nNúmero de secuencias\n") + 
+    ylab("\nScore (unidades arbitrarías)\n") +
+    ggtitle("       Baja varabilidad del score con diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=13, face="bold.italic"))
+
+```
+## Gráfica de Validación: longitud de la secuencias con el número de secuencias a alinear
+```{r}
+
+estadisticos_longitudes_cadenas <- lapply(unique(datos_alineamientos$Data), function(sublista) {
+  # Calcular promedio y desviación estándar de la sublista
+  promedio <- mean(sublista)
+  desviacion_estandar <- sd(sublista)
+  name <-length(sublista)
+  var <-var(sublista)
+  # Devolver el resultado como un data.frame
+  c(name,promedio,desviacion_estandar,var)
+})
+
+estadisticos_longitudes_cadenas <-do.call(rbind, estadisticos_longitudes_cadenas)
+
+estadi_longitud <- data.frame(
+  name=estadisticos_longitudes_cadenas[,1],
+  value=estadisticos_longitudes_cadenas[,2],
+  sd=estadisticos_longitudes_cadenas[,3],
+  var=estadisticos_longitudes_cadenas[,4]
+)
+
+estadi_longitud <- estadi_longitud[order(estadi_longitud$name),]
+
+ggplot(estadi_longitud) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5) + 
+  geom_text(aes(x=name, y=value, label=round(value,2)), vjust=-0.5) +
+    xlab("\nNúmero de secuencias\n") + 
+    ylab("\nLongitud de la secuencia\n") +
+    ggtitle("                                             Longitudes de secuencias con tamaño similar respecto a los diferentes números de secuencias a alinear\n") + 
+  theme( plot.title = element_text(color="black", size=11, face="bold"))
+
+```
+## Gráficas de tiempo vs longitud: media, desviación estándar y varianza 
+```{r}
+
+
+tiempo_longitud<-merge(estadi_longitud, estadi_tiempo, by = "name", all = TRUE)
+tiempo_longitud<- filter(tiempo_longitud, value.x >= 29846)
+ggplot(data = tiempo_longitud, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (mean)")
+
+
+#sd 
+
+ggplot(data = tiempo_longitud, aes(x=sd.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (sd)") 
+
+#Varianza
+
+ggplot(data = tiempo_longitud, aes(x=var, y=value.y))+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nTiempo (seg)\n") + 
+    xlab("\nVariación de la longitud de secuencias\n") +
+  ggtitle("        Tendencia decreciente del tiempo a mayor variación de longitud de las secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=11, face="bold.italic"))
+```
+## Gráficas de tiempo vs score: media, desviación estándar y varianza
+```{r}
+tiempo_score <-merge(estadi_score, estadi_tiempo, by = "name", all = TRUE)
+
+# Gráfica de Tiempo medio vs Score media
+ggplot(data = tiempo_score, aes(x=value.x, y=value.y))+ 
+  #geom_smooth(method=lm, se=FALSE, linetype="dashed",color="darkred")+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nTiempo (seg)\n") + 
+    xlab("\nScore (unidades arbitrárias)\n") +
+    ggtitle("Tiempo computacional inversamente proporcional al score de diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=10, face="bold.italic"))
+
+ggplot(data = tiempo_score, aes(x=value.y, y=value.x+I(value.x^2)))+ 
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nTiempo (seg)\n") + 
+    xlab("\nScore (unidades arbitrárias)\n") +
+    ggtitle("Tiempo computacional inversamente proporcional al score de diferentes números de secuencias\n") + 
+  theme( plot.title = element_text(color="black", size=10, face="bold.italic"))
+
+ggplot(data = tiempo_score, aes(x=value.x, y=sd.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (sd)") + 
+    xlab("Score (mean)")
+```
+## Gráficas de score vs longitud: media, desviación estándar y varianza
+```{r}
+
+
+score_longitud<-merge(estadi_longitud, estadi_score, by = "name", all = TRUE)
+score_longitud<- filter(score_longitud, value.x >= 29846)
+ggplot(data = score_longitud, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (mean)")
+
+
+#sd 
+
+ggplot(data = score_longitud, aes(x=sd.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (sd)") 
+
+#Varianza
+
+ggplot(data = score_longitud, aes(x=var, y=value.y))+
+  geom_line()+
+  geom_point()+
+  geom_text(aes(label=name), vjust=-0.6, hjust=0) +
+    ylab("\nScore (unidad arbitrária)\n") + 
+    xlab("\nVariabilidad de la longitud de secuencias\n") +
+  ggtitle("Incremento de la variabilidad de la longitud de secuencias frente a la tendencia creciente del score a\n") + 
+  theme( plot.title = element_text(color="black", size=10, face="bold.italic"))
+```
+
+
+# Analisis de correlacion
+
+## Shapiro-Wilk test
+
+```{r}
+# Shapiro-Wilk normality test for time
+shapiro.test(datos_alineamientos_n$Tiempo)
+
+# Shapiro-Wilk normality test for score
+shapiro.test(datos_alineamientos_n$Score)
+
+# Shapiro-Wilk normality test for long
+shapiro.test(datos_alineamientos_n$Long)
+```
+Regla -> si es mayor a 0.05 sigue una distribución normal
+De los datos obtenidos se observa que tiempo, score y long sigen una tendencia no normal.
+
+En todas las pruebas, los valores p (p-value) son extremadamente bajos (cercanos a cero), lo que sugiere que los datos no siguen una distribución normal. Esto podría indicar que los datos son no normales.
+
+## Kendall's test
+
+La regla que cumple este test es que si el p-valor es menor a 0.05 se acepta la tau (cor)
+
+```{r}
+
+# Correlación de Kendall para Score vs Tiempo de alineamiento
+cor_tiem_scor=cor.test(datos_alineamientos_n$Score, datos_alineamientos_n$Tiempo,  method="kendall")
+cor_tiem_scor
+
+# Correlación de Kendall para Tiempo de alineamiento vs Longitud de secuencias
+cor_tiem_long=cor.test(datos_alineamientos_n$Tiempo, datos_alineamientos_n$Long,  method="kendall")
+cor_tiem_long
+
+# Correlación de Kendall para Longitud de secuencias vs Score
+cor_long_score=cor.test(datos_alineamientos_n$Long, datos_alineamientos_n$Score,  method="kendall")
+cor_long_score
+```
+Se calcularon las correlaciones de Kendall (tau) entre pares de variables ("Score" vs. "Tiempo", "Tiempo" vs. "Long", "Long" vs. "Score"). En general, los resultados muestran valores de tau cercanos a -1 o 1, lo que sugiere fuertes relaciones negativas o positivas entre variables.
+
+Los valores p (p-value) son muy bajos en todas las pruebas, lo que indica que las correlaciones son estadísticamente significativas.
+
+En el primer caso, la variable independiente es el tiempo y la dependiente es el score. Por lo que observando los resultados, entre el score y el tiempo existe una correlación alta y negativa igual a -0.967.  Lo que implica que a medida que el tiempo aumenta el score siempre disminuye de manera perfectamente inversa.
+
+En el segundo caso, la variable independiente es la longitud y la dependiente es el tiempo. Por lo que observando los resultados, entre la longitud y el tiempo existe una correlación alta y positiva igual a 0.860.  Lo que implica que a medida que la longitud de las secuencias es más grande o aumenta, el  tiempo de alineamiento aumentará.
+
+En el tercer caso, la variable independiente es el score y la dependiente es la longitud. 
+Por lo que observando los resultados, entre la longitud y el score existe una correlación alta y negativa igual a -0.8894.  Lo que implica que a medida que la longitud de las secuencias aumenta o es más grande, el score tiende a disminuir. En otra palabras, existe una tendencia a que las secuencias más largas tengan puntajes más bajos o una calidad de alineamiento inferior según la medida representada por score.
+
+
+# Analisis de regresion
+
+## Tiempo y Score
+```{r}
+
+reg.lineal<-lm(Tiempo~Score,data=datos_alineamientos_n)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(datos_alineamientos_n, aes(x = Score, y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+reg.exp<-lm(Tiempo~I(exp(Score)),data=datos_alineamientos_n)
+summary(reg.exp)$adj.r.squared
+
+ggplot(datos_alineamientos_n, aes(x =exp(Score), y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+reg.log<-lm(Tiempo~log(Score),data=datos_alineamientos_n)
+summary(reg.log)$adj.r.squared
+
+ggplot(datos_alineamientos_n, aes(x =log(Score), y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamientos_n)
+summary(reg.log)$adj.r.squared
+
+
+reg.log<-lm(Score~log(Tiempo),data=datos_alineamientos_n)
+summary(reg.log)$adj.r.squared
+
+reg.cuadratica<-lm(Tiempo~poly(Score,5),data=datos_alineamientos_n)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n, aes(x = Score, y = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Score = x)), color = "red")
+
+datos_alineamientos_n_mayor5 = filter(datos_alineamientos_n, Score < 0.982)
+
+reg.cuadratica<-lm(Tiempo~poly(Score,2),data=datos_alineamientos_n_mayor5)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_mayor5, aes(x = Score, y = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Score = x)), color = "red")
+
+reg.cuadratica<-lm(Score~poly(Tiempo,5),data=datos_alineamientos_n)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n, aes(y = Score, x = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Tiempo = x)), color = "red")
+
+reg.cuadratica<-lm(Score~poly(Tiempo,2),data=datos_alineamientos_n_mayor5)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_mayor5, aes(y = Score, x = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Tiempo = x)), color = "red")
+
+```
+
+
+## Tiempo y Long
+```{r}
+datos_alineamientos_n_s_long = filter(datos_alineamientos_n, Long >= 29867)
+
+# Análisis de regresión tiempo longitud hacia una -> LINEAL
+reg.lineal<-lm(Tiempo~Long,data=datos_alineamientos_n_s_long)
+summary(reg.lineal)$adj.r.squared
+datos_alineamientos_n_s_long$Prediccion <- predict(reg.lineal)
+
+ggplot(datos_alineamientos_n_s_long, aes(x = Long, y = Tiempo)) +
+  geom_point() +  # Gráfico de dispersión
+  geom_smooth(method='lm')
+
+
+# Análisis de regresión tiempo longitud hacia una -> LINEAL
+reg.exp<-lm(Tiempo~log(Long,base = exp(10)),data=datos_alineamientos_n_s_long)
+summary(reg.exp)$adj.r.squared
+datos_alineamientos_n_s_long$Prediccion_exp <- exp(predict(reg.exp))
+
+ggplot(datos_alineamientos_n_s_long, aes(x = log(Long), y = Tiempo)) +
+  geom_point()+  # Gráfico de dispersión
+  geom_smooth(method='lm')
+    
+
+# Análisis de regresión tiempo longitud hacia una -> POLINOMIAL DE SEGUNDO GRADO
+reg.polinomial<-lm(Tiempo~poly(Long,2),data=datos_alineamientos_n_s_long)
+summary(reg.polinomial)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = Long, y = Tiempo)) +
+  geom_point() +
+  stat_function(fun = function(x) predict(reg.polinomial, data.frame(Long = x)), color = "red")
+  
+#reg.exp<-lm(Long~I(exp(Tiempo)),data=datos_alineamientos_n_s_long)
+#summary(reg.exp)$adj.r.squared
+
+#reg.log<-lm(Long~log(Tiempo),data=datos_alineamientos_n_s_long)
+#summary(reg.log)$adj.r.squared
+
+#ggplot(data = datos_alineamientos_n_s_long, aes(y = Long, x = Tiempo)) +
+  #geom_point() +
+  #stat_function(fun = function(x) predict(reg.log, data.frame(Tiempo = x)), color = "red")
+
+#reg.polinomial<-lm(Long~poly(Tiempo,7),data=datos_alineamientos_n_s_long)
+#summary(reg.polinomial)$adj.r.squared
+
+#ggplot(data = datos_alineamientos_n_s_long, aes(y = Long, x = Tiempo)) +
+  #geom_point() +
+  #stat_function(fun = function(x) predict(reg.polinomial, data.frame(Tiempo = x)), color = "red")
+
+
+# Análisis de regresión tiempo longitud hacia una -> LINEAL
+tiempo_longitud$Tiempo = tiempo_longitud$value.y
+tiempo_longitud$Long = tiempo_longitud$value.x
+reg.polinomial2<-lm(Tiempo~poly(Long,3),data=tiempo_longitud)
+summary(reg.polinomial)$adj.r.squared
+
+ggplot(data = tiempo_longitud, aes(x = Long, y = Tiempo)) +
+  geom_point()+ 
+  stat_function(fun = function(x) predict(reg.polinomial2, data.frame(Long = x)), color = "red")
+
+```
+## Score y Long
+```{r}
+
+
+reg.lineal<-lm(Score~Long,data=datos_alineamientos_n_s_long)
+summary(reg.lineal)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = Long, y = Score)) +
+  geom_point() +
+  stat_function(fun = function(x) predict(reg.lineal, data.frame(Long = x)), color = "red")
+
+#reg.exp<-lm(Score~(exp(Long)),data=datos_alineamientos_n_s_long)
+#summary(reg.exp)$adj.r.squared
+
+reg.log<-lm(Score~log(Long),data=datos_alineamientos_n_s_long)
+summary(reg.log)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = log(Long), y = Score)) +
+  geom_point() +
+  geom_smooth(method='lm')
+
+reg.cuadratica<-lm(Score~poly(Long,2),data=datos_alineamientos_n_s_long)
+summary(reg.cuadratica)$adj.r.squared
+
+ggplot(data = datos_alineamientos_n_s_long, aes(x = Long, y = Score)) +
+  geom_point() +
+  stat_function(fun = function(x) predict(reg.cuadratica, data.frame(Long = x)), color = "red")
+
+#reg.exp<-lm(Long~(exp(Score)),data=datos_alineamientos_n_s_long)
+#summary(reg.exp)$adj.r.squared
+
+#reg.log<-lm(Long~log(Score),data=datos_alineamientos_n_s_long)
+#summary(reg.log)$adj.r.squared
+
+#reg.cuadratica<-lm(Long~poly(Score,2),data=datos_alineamientos_n_s_long)
+#summary(reg.cuadratica)$adj.r.squared
+
+score_longitud$Score = score_longitud$value.y
+score_longitud$Long = score_longitud$value.x
+reg.polinomial2<-lm(Score~poly(Long,2),data=score_longitud)
+summary(reg.polinomial)$adj.r.squared
+
+ggplot(data = score_longitud, aes(x = Long, y = Score)) +
+  geom_point()+
+  stat_function(fun = function(x) predict(reg.polinomial2, data.frame(Long = x)), color = "red")
+```
+
+# Anova de una via
+
+## Estadísticos
+
+El primer paso es calcular los estadísticos descriptivos por grupo de secuencias que se ha alineado. De esa manera, se tendría un total de 13 grupos ya que se alineo de 5 a 18 secuencias. Ese paso se realizó al inicio del informe.
+
+## Boxplot
+
+El segundo paso es visualizar los datos de forma en que se encuentren o no datos atípicos. Estos outliers pueden influir negativamente en los resultados del ANOVA.
+
+```{r}
+# Dispersión de los datos de la variable tiempo
+boxplot(poly(Tiempo,5)~num,data=datos_alineamientos_n)
+title("Dispersión de los datos de la variable tiempo respecto al alineamiento de secuencias") 
+
+# Dispersión de los datos de la variable score
+boxplot(poly(Score,3)~num,data=datos_alineamientos_n)
+title("Dispersión de los datos de la variable score de los alineamientos") 
+
+# Dispersión de los datos de la variable longitud
+boxplot(Long~num,data=datos_alineamientos_n)
+title("Dispersión de la longitud de las secuencias a alinear ") 
+```
+
+Segun la gráfica número 1 donde se muestra la dispersión de los datos de la variable tiempo respecto al número de secuencias que se ha alineado. En ella, se observan 2 outliers pertenecientes a el alineamiento de 9 y 10 secuencias. Asimismo, se muestra que la mediana se encuentra bastante desplazada del centro de la caja en la mayoría de los boxplots y los bigotes, es decir, el rango de datos en las cajas 12 y 13 son batante amplios.
+
+Para la gráfica número 2, se muestra la dispersión de los datos de la variable score respecto al número de secuencias que se ha alineado. En ella, no se observa la presencia de outliers pero lo que se visualiza es una dispersión de las medianas. Sin embargo, los valores de score por más dispersos que se vean en la gráfica, respecto a la línea de las medianas de los diferentes numeros de secuencias alineados, son bastante similares. 
+
+Para la tercera gráfica, se puede observar que ni siquiera existe la forma de las cajas. Con ello, se realiza el supuesto que los valores de las longitudes finales de los alineamientos son exactamente iguales para cada repetición que se realiza respecto al número de secuencias a alinear.Y tampoco se detecta la presencia de outliars
+
+
+```{r}
+
+#rp.outlier(datos_alineamientos_n[datos_alineamientos_n$Tiempo=="5","num"])
+
+```
+
+
+```{r}
+boxplot(datos_alineamientos_n$Score)
+#title("Boxplot del Puntaje de Alineamientos") 
+
+
+#ggplot(datos_alineamientos_n, aes(x = num , y = Score)) + 
+#  stat_boxplot(geom = "errorbar", width = 0.25) +
+#    geom_boxplot( fill = "skyblue", colour = "black", alpha = 0.5, outlier.colour = "tomato2") +
+#  xlab("\nNúmero de secuencias\n") + 
+#    ylab("\nScore (unidad arbitraria)\n") +
+#    ggtitle("                          Boxplot del Puntaje de Alineamiento\n") + 
+#  theme( plot.title = element_text(color="black", size=11, face="bold.italic"))
+
+boxplot(datos_alineamientos_n$Tiempo)
+#title("Boxplot del Tiempo de Alineamientos")
+
+boxplot(datos_alineamientos_n$Long)
+#title("Boxplot de la Longitud de las secuencias a alinear")
+
+```
+
+En este segundo caso se comparan boxplot de una sola caja. 
+En la primera gráfica se observa la dispersión de los datos de la variable score, donde se visualizan 2 datos atípicos. Asimismo, la mediana se aproxima un poco más al primer quartil, es decir que la mayoría de los datos tienen valores más pequeños como 0.976. Además, observando la distribución de la mediana dentro de la caja que es hacia un extremo y los bigotes son asimétricos, se puede decir que la distribución es asimétrica. 
+
+
+En la segunda gráfica se observa la dispersión de los datos de la variable tiempo, donde no se visualizan datos atípicos. Al contrario que el primer diagrama la mediana se aproxima al centro de la caja aunque tiene una ligera inclinación a el primer cuartil. Sin embargo, lo que resalta de este diagrama es la dispersión de los datos reflejado en la longitud de los bigotes; lo que hace una dispersión asimétrica. Por otro lado, teniendo la información de los tiempos se puede decir que los que pertencen al cuartil inferior son los que corresponden a el alineamiento del menor número de secuencias es decir 5, y los tiempos mayores pertencen a aquellos alineamientos donde se alinea mayor número de secuencias.
+
+
+En la tercera gráfica se observa la dispersión de los datos de la variable longitud, donde se visualiza 1 dato atípico. Asimismo, la mediana se aproxima al tercer quartil, es decir que la gran mayoría de los datos tienen valores altos; lo que quiere decir que la mayoría de las secuencias llega a valores altos como 29 870 pares de bases nucleotídicas. Además, observando la distribución de la mediana dentro de la caja que es hacia un extremo y los bigotes son asimétricos, se puede decir que la distribución es asimétrica.
+```{r}
+
+```
+
+## Prueba de Normalidad de Shapiro-Wilks 
+
+Este tipo de prueba funciona bien para conjuntos de datos pequeños. Para esta prueba se coloca como hipótesis nula a que los datos siguen una distribución normal, y la alternativa que no lo hacen. Eso quiere decir que si el p-valor de la prueba es menor a 0.05 se rechaza la hipótesis nula, y se da como respuesta que cada grupo de estudio no sigue una distribución normal. Por el contrario, si el p-valor es mayor a 0.05 se estaría cumpliendo con la distribución normal de los datos.
+
+```{r}
+# Shapiro-Wilk normality test for time
+by(datos_alineamientos_n$Tiempo,datos_alineamientos_n$num,shapiro.test)
+
+# Shapiro-Wilk normality test for score
+#by(datos_alineamientos_n$Score,datos_alineamientos_n$num,shapiro.test)
+
+# Shapiro-Wilk normality test for long
+#by(datos_alineamientos_n$Long,datos_alineamientos_n$num,shapiro.test)
+
+```
+Existen 10 grupos que tienen un p-valor inferior a 0.05, lo que quiere decir que no cumplen con una distribución normal. En cambio hay 4 grupos que tienen un p-valor mayor a 0.05, es decir que estos estarían cumpliendo con la distribución normal de los datos. Pero en general la mayoría de los datos del tiempo no siguen con una distribución normal. 
+
+```{r}
+# Shapiro-Wilk normality test for score
+#by(datos_alineamientos_n$Score,datos_alineamientos_n$num,shapiro.test)
+
+# Shapiro-Wilk normality test for long
+#by(datos_alineamientos_n$Long,datos_alineamientos_n$num,shapiro.test)
+
+```
+
+## Pruebas para Homogeneidad de varianza
+
+Comprueba que las varianzas de la respuesta en cada grupo son iguales.
+Por lo que, para esta prueba la hipótesis nula quiere decir que los datos presentan homogeneidad de varianza entre los grupos. De esa manera, si el p-valor es inferior a 0.05 no se cumple este supuesto. Pero si en cambio el p-valor es mayor a 0.05 existe homogeneidad de varianza. 
+
+
+```{r}
+bartlett.test(datos_alineamientos_n$Tiempo,datos_alineamientos_n$num)
+
+```
+El test servia para comparar la variabilida en la variable tiempo entre los grupos definifos por la variable num.
+
+Para el primer test que es el de Bartlett, se observa que el p-valor es extremadamente bajo a 0.05 por lo que  no se cumple la hipótesis nula de que los datos presentan homogeneidad de varianza entre los grupos y se indica que hay una diferencia significativa en las varianzas entre los grupos de secuencias.
+
+## Prueba ANOVA de Welch
+
+Cuando se viola el supuesto de varianzas iguales, se procede a realizar el ANOVA de Welch.
+
+```{r}
+oneway.test(Tiempo~num,datos_alineamientos_n)
+```
+
+El One-way test, que más bien se utiliza cuando se asume que las varianzas entre grupos no son iguales debido a los resultados del test de Bartlett. Dicho esto, se observa que el valor de F es extremadamente alto se sugiere que hay diferencias significativas entre al menos dos de los grupos en términos de la variable "tiempo". Asimismo, el p-value es muy bajo, lo que indica que al menos un grupo es significativamente diferente de los demás en términos de la variable tiempo.
+
+
+
+## Prueba ANOVA R
+
+La prueba de ANOVA permite conocer si existen diferencias entre los grupos. En este caso, el siguiente codigo ajusta un modelo ANOVA unidireccional a los datos para determinar si los valores medios de cada grupo son iguales.
+
+Primero se convierte los datos del numero de secuencias "num" a un factor  categórico: 
+
+```{r}
+datos_alineamientos_n$num <- as.factor(datos_alineamientos_n$num)
+```
+
+```{r}
+analysis <- aov(datos_alineamientos_n$Tiempo ~ datos_alineamientos_n$num, data=datos_alineamientos_n)
+summary(analysis)
+```
+Existen diferencias estadísticamente significativas entre los grupos de secuencias. Y dado que el p-valor es menor que 0.05 quiere decir que los valores medios en cada grupo no son iguales. 
+
+# Prueba Post-Hoc
+
+Esta prueba determina que medias de grupo son diferentes de las otras. En este caso, la prueba de Tukey, permite realizar comparaciones por pares entre las medias de cada grupo mientras se controla la tasa de error familiar.
+
+```{r}
+TukeyHSD(analysis, conf.level = 0.95)
+```
+En este caso, se realizó una prueba de comparaciones múltiples de Tukey para identificar cuáles grupos son significativamente diferentes entre sí en términos de "Tiempo". Las diferencias son estadísticamente significativas ya que el valor de p es 0 en todas las comparaciones. Asimismo, cada fila en la tabla representa una comparación específica entre dos grupos, y los valores de diff, lwr, upr y p adj te ayudan a interpretar la significancia estadística de esas diferencias.
+
+El valor de p adj igual a 0 significa que esta diferencia es estadísticamente significativa a un nivel de confianza del 95%.
+
+Para visualizar de mejor manera los resultados, estos se pueden graficar:
+
+```{r}
+plot(TukeyHSD (analysis, conf.level =0.95 ), las = 2 )
+```
+
+
+Conclusiones:
+- Los resultados sugieren que las variables "Tiempo" y "num" están relacionadas y que hay diferencias significativas entre los grupos definidos por "num" en términos de "Tiempo". 
+
+- Los datos en general no siguen una distribución normal, lo que podría tener implicaciones en la elección de métodos estadísticos posteriores.
+
+- La fuerte correlación entre algunas variables también puede ser de interés para el análisis posterior.
+- TENDENCIA QUE SIGUEN LAS DIFERENTES RELACIONES 
+
+
+-----------------------------------
+Comparación de algoritmo por el nuestro 
+- presentar el artículo evidencia de que es polinomial 
+- mismo formato para hacer las comparaciones 
+- mejorar es la forma de presentarlo - objetivos que se quieren con cada gráfica
+
+- cada vez que se maneja: 4 preguntas
+  - que es lo que quieres responder: quiero evaluar si la longirud de las secuencias altera score
+  - como lo hice: agarre secuencias las dividi en tantas o agarre tantas
+  - que encontre: lo corri y encontre esto
+  - conclusión : demuestra que no hay diferencias 
+
+hara que se cierre ideas -> vi diferencia si tiene o no -> al final tiene o no que ver y asi se pasa 
+reordenar el trabajo 
+
+shapiro wilks -> meter una cadena de secuencias de numeros , chequear lineas de codigo 
+
+chequear el codigo -> llegar a un mismo formato de presentación 
+
+
+objetivo: probar si las computadoras cuanticas tienen mejor renimiento que las convencionales 
+
+hacer algoritmo rendimiento de nuestras computadoras 
+
+comparar los nuestro con los otros 
+
+-> mñn organizar presentación 
+
+evaluar eficiencia a traves del desarrollo de 
+
+adaptando algoritmo que ya esta reportado
+
+
+tecnología adecuada
+nueva herramienta 
+
+empresa 
+desarrollo de herramientas para la comunidad cientifica 
+agregar que es parte de objetivos de la 
+
+-> Ajustes para ajustarnos a ellos 
+
+
+
+
+

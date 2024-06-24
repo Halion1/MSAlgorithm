@@ -1,0 +1,7 @@
+"0","tiempo_score <-merge(estadi_score, estadi_tiempo, by = ""name"", all = TRUE)"
+"0",""
+"0","ggplot(data = tiempo_score, aes(x=value.x, y=value.y))+"
+"0","  geom_line()+"
+"0","  geom_point()+"
+"0","    ylab(""Tiempo (mean)"") + "
+"0","    xlab(""Score (mean)"")"

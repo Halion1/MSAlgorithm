@@ -1,0 +1,7 @@
+"0",""
+"0",""
+"0","ggplot(data = tiempo_score, aes(x=value.x, y=sd.y))+"
+"0","  geom_line()+"
+"0","  geom_point()+"
+"0","    ylab(""Tiempo (sd)"") + "
+"0","    xlab(""Score (mean)"")"

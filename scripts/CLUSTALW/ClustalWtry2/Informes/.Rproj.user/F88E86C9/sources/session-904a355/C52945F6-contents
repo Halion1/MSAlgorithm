@@ -1,0 +1,196 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Instalacion de Librerias
+```{r}
+library(jsonlite)
+library(psych)
+library(ggplot2)
+```
+
+Carga de datos
+```{r}
+# Ruta a la carpeta que contiene los archivos JSON
+carpeta <- "Alineamientos"
+
+# Obtener la lista de archivos en la carpeta
+archivos <- list.files(path = carpeta, pattern = ".json", full.names = TRUE)
+
+# Crear una table para almacenar los datos de los archivos JSON
+datos_alineamientos <- data.frame()
+
+# Iterar sobre cada archivo y leer su contenido JSON
+for (archivo in archivos) {
+  # Leer el contenido del archivo JSON
+  contenido <- read_json(archivo)
+  contenido$Alineamiento$num <- length(contenido$Cadenas)
+  nuevos_datos_df <- as.data.frame(contenido$Alineamiento)
+  nuevos_datos_df$Data = list(unlist(lapply(contenido$Cadenas, function(x) x[[1]])))
+  
+  datos_alineamientos<-rbind(nuevos_datos_df,datos_alineamientos)
+}
+datos_alineamientos_n <- datos_alineamientos[,c("Tiempo","Score","Long","num")]
+```
+
+# Estadisticos
+
+```{r}
+esta_grup <- describeBy(datos_alineamientos_n,datos_alineamientos_n$num)
+esta_grup
+# Indexado Estadistico
+# esta_grup_tiempo[["5"]][["sd"]]
+```
+
+# Grafica de barras y sd por grupos para cada variable
+
+```{r}
+generar_value_vector <- function(esta_grup,estadistico, lista,variable) {
+  # Crear un vector para almacenar los valores
+  value_vector <- numeric(length(lista))
+  j <-1
+  # Iterar desde 'start' hasta 'end'
+  for (i in lista) {
+    # Obtener el valor mean correspondiente
+    value_vector[j] <- esta_grup[[as.character(i)]][[estadistico]][variable]
+    j <-j+1
+  }
+
+  return(value_vector)
+}
+
+estadi_tiempo <- data.frame(
+  name=unique(datos_alineamientos_n$num),
+  value=generar_value_vector(esta_grup,"mean",unique(datos_alineamientos_n$num),1),
+  sd=generar_value_vector(esta_grup,"sd",unique(datos_alineamientos_n$num),1)
+)
+
+estadi_tiempo<-estadi_tiempo[order(estadi_tiempo$name),]
+
+ggplot(estadi_tiempo) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5)+
+    xlab("Grupos") + 
+    ylab("Tiempo (s)") 
+
+```
+
+```{r}
+
+estadi_score <- data.frame(
+  name=unique(datos_alineamientos_n$num),
+  value=generar_value_vector(esta_grup,"mean",unique(datos_alineamientos_n$num),2),
+  sd=generar_value_vector(esta_grup,"sd",unique(datos_alineamientos_n$num),2)
+)
+
+estadi_score <- estadi_score[order(estadi_score$name),]
+
+ggplot(estadi_score) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5)+
+    xlab("Grupos") + 
+    ylab("Score") 
+
+```
+```{r}
+
+estadisticos_longitudes_cadenas <- lapply(unique(datos_alineamientos$Data), function(sublista) {
+  # Calcular promedio y desviación estándar de la sublista
+  promedio <- mean(sublista)
+  desviacion_estandar <- sd(sublista)
+  name <-length(sublista)
+  var <-var(sublista)
+  # Devolver el resultado como un data.frame
+  c(name,promedio,desviacion_estandar,var)
+})
+
+estadisticos_longitudes_cadenas <-do.call(rbind, estadisticos_longitudes_cadenas)
+
+estadi_longitud <- data.frame(
+  name=estadisticos_longitudes_cadenas[,1],
+  value=estadisticos_longitudes_cadenas[,2],
+  sd=estadisticos_longitudes_cadenas[,3],
+  var=estadisticos_longitudes_cadenas[,4]
+)
+
+estadi_longitud <- estadi_longitud[order(estadi_longitud$name),]
+
+ggplot(estadi_longitud) +
+    geom_bar( aes(x=name, y=value), stat="identity", fill="skyblue", alpha=0.7) +
+    geom_errorbar( aes(x=name, ymin=value-sd, ymax=value+sd), width=0.4, colour="orange", alpha=0.9, size=0.5)+
+    xlab("Grupos") + 
+    ylab("Longitud") 
+
+```
+
+```{r}
+
+
+tiempo_longitud<-merge(estadi_longitud, estadi_tiempo, by = "name", all = TRUE)
+
+ggplot(data = tiempo_longitud, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (mean)")
+
+
+#sd 
+
+ggplot(data = tiempo_longitud, aes(x=sd.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (sd)") 
+
+#Varianza
+
+ggplot(data = tiempo_longitud, aes(x=var, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Longitud (var)") 
+```
+```{r}
+tiempo_score <-merge(estadi_score, estadi_tiempo, by = "name", all = TRUE)
+
+ggplot(data = tiempo_score, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (mean)") + 
+    xlab("Score (mean)")
+ggplot(data = tiempo_score, aes(x=value.x, y=sd.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Tiempo (sd)") + 
+    xlab("Score (mean)")
+```
+
+```{r}
+
+
+score_longitud<-merge(estadi_longitud, estadi_score, by = "name", all = TRUE)
+
+ggplot(data = score_longitud, aes(x=value.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (mean)")
+
+
+#sd 
+
+ggplot(data = score_longitud, aes(x=sd.x, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (sd)") 
+
+#Varianza
+
+ggplot(data = score_longitud, aes(x=var, y=value.y))+
+  geom_line()+
+  geom_point()+
+    ylab("Score (mean)") + 
+    xlab("Longitud (var)") 
+```

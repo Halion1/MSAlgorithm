@@ -1,0 +1,17 @@
+"0","library(jsonlite)"
+"2","Warning: package ‘jsonlite’ was built under R version 4.3.1"
+"0","library(psych)"
+"0","library(ggplot2)"
+"2","Warning: package ‘ggplot2’ was built under R version 4.3.1"
+"2","RStudio Community is a great place to get help:
+https://community.rstudio.com/c/tidyverse
+"
+"2","
+Attaching package: ‘ggplot2’
+
+"
+"2","The following objects are masked from ‘package:psych’:
+
+    %+%, alpha
+
+"
